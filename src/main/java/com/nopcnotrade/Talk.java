@@ -21,9 +21,18 @@ public class Talk {
         d("diamond", "OKAY, NOW WE'RE GETTING SOMEWHERE.", "WAIT... STILL NO PC?", "I CAN'T INSTALL WINDOWS ON A DIAMOND!");
     }
 
+    public static List<String> lines(String key) {
+        List<String> l = Cfg.d.dialogue.getOrDefault(key, List.of());
+        return l.isEmpty() ? DEFAULTS.getOrDefault(key, List.of()) : l;
+    }
+
     public static String pick(String key, RandomSource rnd) {
         List<String> l = Cfg.d.dialogue.getOrDefault(key, List.of());
         if (l.isEmpty()) l = DEFAULTS.getOrDefault(key, List.of("NO PC! NO TRADE!"));
-        return l.get(rnd.nextInt(l.size()));
+        String r = l.get(rnd.nextInt(l.size()));
+        for (int i = 0; i < 8 && l.size() > 1 && r.equals(LAST.get(key)); i++) r = l.get(rnd.nextInt(l.size()));
+        LAST.put(key, r);
+        return r;
     }
+    static final Map<String, String> LAST = new HashMap<>();
 }
