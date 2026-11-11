@@ -1,6 +1,9 @@
 package com.nopcnotrade;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.particles.ParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
@@ -34,6 +37,22 @@ public class Crowd {
     static long nextSpeechTick = 0;
     static long lastCrowdLine = -10000;
 
+    // Short-lived animated emotes rendered with vanilla particles above the speaking villager.
+    private static final class ActiveEmote {
+        final Villager villager;
+        final ParticleOptions particle;
+        final long expiresAt;
+        long nextPulse;
+
+        ActiveEmote(Villager villager, ParticleOptions particle, long startTick) {
+            this.villager = villager;
+            this.particle = particle;
+            this.expiresAt = startTick + 26;
+            this.nextPulse = startTick;
+        }
+    }
+    static final Map<UUID, ActiveEmote> emotes = new HashMap<>();
+
     static final ChatFormatting[] COLORS = {ChatFormatting.GREEN, ChatFormatting.AQUA, ChatFormatting.YELLOW, ChatFormatting.GOLD,
             ChatFormatting.LIGHT_PURPLE, ChatFormatting.RED, ChatFormatting.BLUE, ChatFormatting.DARK_AQUA};
 
@@ -44,6 +63,7 @@ public class Crowd {
     /** Runs every 0.5s. Villager movement is controlled only by the vanilla Brain. */
     public static void tick(MinecraftServer s) {
         int tc = s.getTickCount();
+        tickEmotes();
         if (tc % 10 != 0) return;
 
         String name = Cfg.d.targetUsername.trim();
@@ -246,7 +266,48 @@ public class Crowd {
         queueSpeech(villager, key, text);
     }
 
+    static void startEmote(ServerLevel lv, Villager villager, String key) {
+        ParticleOptions particle = switch (key) {
+            case "shout", "trade" -> ParticleTypes.ANGRY_VILLAGER;
+            case "recognize" -> ParticleTypes.NOTE;
+            case "chant" -> ParticleTypes.CRIT;
+            case "emerald" -> new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.EMERALD));
+            case "furnace" -> new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.FURNACE));
+            case "toaster" -> new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(NoPcNoTrade.TOASTER));
+            case "dirt" -> new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.DIRT));
+            case "coal" -> new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.COAL));
+            case "redstone" -> new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.REDSTONE));
+            case "iron_ingot" -> new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.IRON_INGOT));
+            case "diamond" -> new ItemParticleOption(ParticleTypes.ITEM, new ItemStack(Items.DIAMOND));
+            default -> ParticleTypes.HAPPY_VILLAGER;
+        };
+        long now = lv.getGameTime();
+        emotes.put(villager.getUUID(), new ActiveEmote(villager, particle, now));
+    }
+
+    /** Emit a small particle burst every 3 ticks so the emote appears to float above the villager. */
+    static void tickEmotes() {
+        for (var it = emotes.entrySet().iterator(); it.hasNext();) {
+            var entry = it.next();
+            ActiveEmote emote = entry.getValue();
+            Villager villager = emote.villager;
+            if (!villager.isAlive() || !(villager.level() instanceof ServerLevel lv)
+                    || lv.getGameTime() >= emote.expiresAt) {
+                it.remove();
+                continue;
+            }
+            long now = lv.getGameTime();
+            if (now < emote.nextPulse) continue;
+            double x = villager.getX();
+            double y = villager.getY() + villager.getBbHeight() + 0.48;
+            double z = villager.getZ();
+            lv.sendParticles(emote.particle, x, y, z, 2, 0.09, 0.08, 0.09, 0.015);
+            emote.nextPulse = now + 3;
+        }
+    }
+
     static void playSpeechNow(ServerLevel lv, Villager villager, String key, String text) {
+        startEmote(lv, villager, key);
         int n = Math.floorMod(villager.getUUID().hashCode(), 100);
         MutableComponent message = Component.literal("[Villager #" + n + "]: ")
                 .withStyle(COLORS[n % COLORS.length], ChatFormatting.BOLD)
