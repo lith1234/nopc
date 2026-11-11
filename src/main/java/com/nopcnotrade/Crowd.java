@@ -85,7 +85,8 @@ public class Crowd {
         List<Villager> vs = lv.getEntitiesOfClass(Villager.class, p.getBoundingBox().inflate(Cfg.d.radius),
                 v -> v.isAlive() && !v.isSleeping());
         if (vs.isEmpty()) return;
-        vs.sort(Comparator.comparingDouble(v -> v.distanceToSqr(p)));
+        final ServerPlayer targetPlayer = p;
+        vs.sort(Comparator.comparingDouble(v -> v.distanceToSqr(targetPlayer)));
 
         if (sec) { // Gradual recruitment, at most 3 new villagers per second.
             boolean fresh = active.isEmpty();
