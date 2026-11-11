@@ -8,7 +8,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.InteractionResult;
@@ -20,7 +20,8 @@ public class NoPcNoTrade implements ModInitializer {
     @Override
     public void onInitialize() {
         Cfg.load();
-        ResourceLocation id = ResourceLocation.fromNamespaceAndPath(MODID, "toaster");
+        Voices.register();
+        Identifier id = Identifier.fromNamespaceAndPath(MODID, "toaster");
         TOASTER = Registry.register(BuiltInRegistries.ITEM, id,
                 new Item(new Item.Properties().stacksTo(16).setId(ResourceKey.create(Registries.ITEM, id))));
         ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.INGREDIENTS).register(e -> e.accept(TOASTER));

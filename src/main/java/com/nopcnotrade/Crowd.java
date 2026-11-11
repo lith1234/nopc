@@ -6,6 +6,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
@@ -13,7 +14,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.ai.behavior.EntityTracker;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
-import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -61,7 +62,7 @@ public class Crowd {
             if (active.size() >= Cfg.d.maxCrowd || add >= 3) break;
             if (active.containsKey(v.getUUID()) || calm.containsKey(v.getUUID())) continue;
             active.put(v.getUUID(), now + Cfg.d.crowdSeconds * 20L);
-            if (fresh && add == 0) say(lv, v, Talk.pick("shout", lv.random));
+            if (fresh && add == 0) say(lv, v, "shout");
             add++;
         }
 
@@ -82,7 +83,7 @@ public class Crowd {
             if (!nextSpeak.containsKey(v.getUUID())) {
                 int cd = Cfg.d.messageCooldownSeconds * 20;
                 nextSpeak.put(v.getUUID(), now + cd + lv.random.nextInt(cd + 1));
-                say(lv, v, Talk.pick("recognize", lv.random));
+                say(lv, v, "recognize");
             }
         }
     }
@@ -111,7 +112,7 @@ public class Crowd {
         if (now - st[1] < 8) return InteractionResult.SUCCESS_SERVER; // anti-spam
         st[0]++; st[1] = now;
         refuse(lv, v);
-        say(lv, v, Talk.pick(key(p.getMainHandItem()), lv.random));
+        say(lv, v, key(p.getMainHandItem()));
         int chanters = (int) Math.min(4, (st[0] - 1) / 2); // protest escalates with repeated attempts
         if (chanters > 0) {
             List<Villager> near = lv.getEntitiesOfClass(Villager.class, v.getBoundingBox().inflate(16), o -> o != v && o.isAlive());
@@ -120,7 +121,7 @@ public class Crowd {
                 Villager c = near.get(i);
                 refuse(lv, c);
                 c.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(p, true));
-                say(lv, c, Talk.pick("chant", lv.random));
+                say(lv, c, "chant");
             }
         }
         return InteractionResult.SUCCESS_SERVER;
@@ -131,11 +132,14 @@ public class Crowd {
         lv.playSound(null, v.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1f, 0.9f + lv.random.nextFloat() * 0.2f);
     }
 
-    static void say(ServerLevel lv, Villager v, String text) {
+    static void say(ServerLevel lv, Villager v, String key) {
+        String text = Talk.pick(key, lv.random);
         int n = Math.floorMod(v.getUUID().hashCode(), 100);
         MutableComponent c = Component.literal("[Villager #" + n + "]: ").withStyle(COLORS[n % COLORS.length], ChatFormatting.BOLD)
                 .append(Component.literal(text).withStyle(ChatFormatting.WHITE));
         for (ServerPlayer sp : lv.players()) if (sp.distanceToSqr(v) < 1024) sp.sendSystemMessage(c);
-        lv.playSound(null, v.blockPosition(), SoundEvents.VILLAGER_AMBIENT, SoundSource.NEUTRAL, 1f, 0.8f + lv.random.nextFloat() * 0.4f);
+        SoundEvent vo = Voices.find(key, text);
+        if (vo != null) lv.playSound(null, v.blockPosition(), vo, SoundSource.VOICE, 2f, 1f);
+        else lv.playSound(null, v.blockPosition(), SoundEvents.VILLAGER_AMBIENT, SoundSource.NEUTRAL, 1f, 0.8f + lv.random.nextFloat() * 0.4f);
     }
 }
