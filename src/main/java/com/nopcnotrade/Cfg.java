@@ -7,17 +7,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-/** JSON config at config/nopcnotrade.json. Edit and restart. Missing dialogue keys are re-added automatically. */
+ /** JSON config at config/nopcnotrade.json. Edit and restart. Missing dialogue keys are re-added automatically. */
 public class Cfg {
     public static class Data {
         public String targetUsername = "PCGuy";
         public int radius = 24, maxCrowd = 12, crowdSeconds = 25;
-        /** Each line may be said at most this many times per crowd/protest (then it is not used again). */
+        /** Each line may be said at most this many times per crowd/protest. */
         public int maxTimesPerLine = 2;
-        /** Optional pause between crowd lines. 0 = no pause (one line per second at most). */
-        public int secondsBetweenCrowdLines = 0;
-        /** If a villager is stuck and cannot reach the player, place it into the crowd. */
-        public boolean teleportStuckVillagers = true;
+        /** Minimum pause between ambient recognition lines. */
+        public int secondsBetweenCrowdLines = 4;
         public Map<String, List<String>> dialogue = new LinkedHashMap<>();
     }
     public static Data d = new Data();
@@ -38,7 +36,7 @@ public class Cfg {
         d.radius = Math.max(8, Math.min(64, d.radius));
         d.maxCrowd = Math.max(1, Math.min(40, d.maxCrowd));
         d.crowdSeconds = Math.max(5, d.crowdSeconds);
-        d.secondsBetweenCrowdLines = Math.max(0, d.secondsBetweenCrowdLines);
+        d.secondsBetweenCrowdLines = Math.max(2, Math.min(30, d.secondsBetweenCrowdLines));
         d.maxTimesPerLine = Math.max(1, d.maxTimesPerLine);
         try { Files.writeString(f, g.toJson(d)); } catch (Exception ignored) {}
     }
