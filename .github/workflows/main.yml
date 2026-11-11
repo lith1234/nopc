@@ -10,7 +10,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: current
@@ -23,7 +23,9 @@ jobs:
           q = urllib.parse.quote
           loader = [x for x in json.loads(get('https://meta.fabricmc.net/v2/versions/loader')) if x['stable']][0]['version']
           fapi = json.loads(get('https://api.modrinth.com/v2/project/fabric-api/version?game_versions=' + q('["1.21.11"]') + '&loaders=' + q('["fabric"]')))[0]['version_number']
-          loom = re.search(r'<release>([^<]+)</release>', get('https://maven.fabricmc.net/net/fabricmc/fabric-loom/maven-metadata.xml')).group(1)
+          meta = get('https://maven.fabricmc.net/net/fabricmc/fabric-loom/maven-metadata.xml')
+          stable = re.findall(r'<version>(\d+\.\d+(?:\.\d+)?)</version>', meta)
+          loom = max(stable, key=lambda s: tuple(map(int, s.split('.')))) if stable else '1.14-SNAPSHOT'
           open('gradle.properties', 'w').write(
               'org.gradle.jvmargs=-Xmx2G\nmod_version=1.0.0\nminecraft_version=1.21.11\n'
               f'loader_version={loader}\nfabric_version={fapi}\nloom_version={loom}\n')
