@@ -2,6 +2,11 @@ name: Build mod
 on:
   push:
   workflow_dispatch:
+
+# Keep only one build queued/running for this branch.
+concurrency:
+  group: nopcnotrade-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -10,7 +15,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 25
+          java-version: 21
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: current
